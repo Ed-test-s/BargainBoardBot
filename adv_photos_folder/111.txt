@@ -1,0 +1,69 @@
+def get_photo(message):     connect = sqlite3.connect('AdvertDataBase.db')     cursor = connect.cursor()    # подключаем курсор для взаимодействия с БД      #########     if message.photo:         advert_data[message.chat.id]['photo'] = message.photo[-1].file_id         bot.send_message(message.chat.id, 'Объявление создано!')     else:         bot.send_message(message.chat.id, 'Фото не получено. Объявление будет без фото.')      # Отправляем все собранные данные для пользователя     advert = advert_data[message.chat.id]     # Получаем photo_id, если оно есть     photo_id = advert.get('photo', None)      # Записываем данные в БД     cursor.execute("""                 INSERT INTO Adverts(ChatID, Authors_username, Category, Title, Description, Price, Photos)                 VALUES(?, ?, ?, ?, ?, ?, ?)                 """,                    (message.chat.id,                     message.from_user.username,                     advert["category"],                     advert["title"],                     advert["description"],                     advert["price"],                     None))      connect.commit() Перепиши этот код так, чтобы: в случае если от пользователя приходит какое-то количество фотографий, бот создавал папку с названием message.from_user.username_advert["title"] и загружал туда полученные фотографии, в случае если пользователь отправил не фотографии, создавать папку и не заполнять ее ничем
+
+
+
+
+
+
+
+№№№№№№№№№№№№№№№№№№№№№№№№№№№№№№№№№№№№№№№№№№№№№№№
+
+
+import os
+import sqlite3
+import shutil
+
+def get_photo(message):
+    connect = sqlite3.connect('AdvertDataBase.db')
+    cursor = connect.cursor()
+
+    username = message.from_user.username
+    title = advert_data[message.chat.id]["title"]
+    folder_name = f"{username}_{title}"
+    folder_path = os.path.join('uploads', folder_name)
+
+    # Создаем папку, если ее еще нет
+    if not os.path.exists(folder_path):
+        os.makedirs(folder_path)
+
+    # Если есть фотографии, сохраняем их в папку
+    if message.photo:
+        for photo in message.photo:
+            file_id = photo.file_id
+            file_path = bot.get_file(file_id).file_path
+            file_name = file_path.split('/')[-1]
+            downloaded_file = bot.download_file(file_path)
+
+            # Сохраняем файл в папку
+            with open(os.path.join(folder_path, file_name), 'wb') as f:
+                f.write(downloaded_file)
+
+        advert_data[message.chat.id]['photo'] = folder_path
+        bot.send_message(message.chat.id, 'Объявление создано с фотографиями!')
+    else:
+        advert_data[message.chat.id]['photo'] = None
+        bot.send_message(message.chat.id, 'Фото не получено. Объявление будет без фото.')
+
+    # Отправляем все собранные данные для пользователя
+    advert = advert_data[message.chat.id]
+
+    # Записываем данные в БД
+    cursor.execute("""
+        INSERT INTO Adverts(ChatID, Authors_username, Category, Title, Description, Price, Photos)
+        VALUES(?, ?, ?, ?, ?, ?, ?)
+    """, (
+        message.chat.id,
+        message.from_user.username,
+        advert["category"],
+        advert["title"],
+        advert["description"],
+        advert["price"],
+        folder_path if message.photo else None
+    ))
+
+    connect.commit()
+
+
+
+
+
